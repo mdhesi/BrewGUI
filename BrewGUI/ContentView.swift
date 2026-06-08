@@ -1,24 +1,16 @@
-//
-//  ContentView.swift
-//  BrewGUI
-//
-//  Created by Manny Dhesi on 2026-06-06.
-//
-
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    private var output = CommandRunner.runBrew()
 
-#Preview {
-    ContentView()
+    var body: some View {
+        ScrollView {
+            Text(output)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .textSelection(.enabled)
+                .font(.system(.body, design: .monospaced))
+        }
+            
+    }
 }

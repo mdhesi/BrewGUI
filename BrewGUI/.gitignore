@@ -1,0 +1,4 @@
+/Documentation/Resources/*
+xcuserdata/
+.build/
+DerivedData/
