@@ -23,7 +23,8 @@ class CommandRunner {
         brewList.arguments = arguments
         
         // TODO: Create a Pipe to capture output
-        // Pipe so we can caputure the output of the process and redirect it to a buffer that the app can read from
+        // Pipe so we can caputure the output the process and redirect it to a buffer that the app can read
+        
         let pipe = Pipe()
         
         // TODO: Assign the pipe to process.standardOutput
