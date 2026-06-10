@@ -8,26 +8,54 @@
 
 import SwiftUI
 
+enum SidebarItem: Hashable {
+    case allPackages
+    case installed
+    case updates
+}
+
 struct ContentView: View {
     private var output = CommandRunner.runBrew()
+    @State private var selection: SidebarItem? = .allPackages
+    private var packages: [String] { // computed property, runs everytime packages is used
+        output
+            .split(separator: "\n")
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines)} // $0 means current elements
+            .filter { !$0.isEmpty }
+    }
     
     var body: some View {
         NavigationSplitView {
-            List {
+            List (selection: $selection) { // $ is for state vars, it is so that List can READ and WRITE, no dollar sign means just READ
                 Section("Browse") {
-                    Label("All Packages", systemImage: "shippingbox")
+                    Label("All Packages", systemImage: "shippingbox").tag(SidebarItem.allPackages)
                 }
                 Section("Manage") {
-                    Label("Installed", systemImage: "arrow.down.circle")
-                    Label("Updates", systemImage: "arrow.trianglehead.2.clockwise")
+                    Label("Installed", systemImage: "arrow.down.circle").tag(SidebarItem.installed)
+                    Label("Updates", systemImage: "arrow.trianglehead.2.clockwise").tag(SidebarItem.updates)
                 }
             }
             .navigationTitle("Homebrew")
         } detail: {
-            Text("See Installed Packages")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .padding()
+            switch selection {
+            case .allPackages:
+                Text("All Packages")
+
+            case .installed, .none:
+                
+                List(packages, id: \.self) { pkg in
+                    HStack {
+                        Image(systemName: "shippingbox")
+                            .foregroundStyle(.secondary)
+                        Text(pkg)
+                    }
+                }
+
+            case .updates:
+                Text("Updates")
+                    .font(.title)
+                    .padding()
+            }
         }
     }
 }
