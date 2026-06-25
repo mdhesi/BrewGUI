@@ -1,10 +1,3 @@
-/*
- A green progress bar that repeatedly fills from 0% → 100% while an operation
- is in flight. `brew update` doesn't report a real percentage, so this is a
- looping "activity" fill rather than true progress — it just looks nicer than
- a spinning wheel.
- */
-
 import SwiftUI
 
 struct CheckingProgressBar: View {

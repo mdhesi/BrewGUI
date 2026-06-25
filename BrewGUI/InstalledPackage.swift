@@ -1,10 +1,3 @@
-/*
- A single installed Homebrew package — either a formula or a cask.
-
- Populated from `brew list --versions` (formulae) and
- `brew list --cask --versions` (casks), both of which emit "name version".
- */
-
 import Foundation
 
 struct InstalledPackage: Identifiable, Hashable {

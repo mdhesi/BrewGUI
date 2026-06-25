@@ -1,12 +1,3 @@
-/*
- 1. Create Process - Tell the OS "I want to spawn a subprocess"
- 2. Configure it - "Run this executable (brew), with these arguments (list --formula)"
- 3. Set up communication - "Capture the output so I can read it" (that's what Pipe does-it's inter-process communication)
- 4. Execute & wait - "Run it, and don't proceed until it's done"
- 5. Parse output - "Convert the raw bytes the subprocess produced into text my app understands"
- 6. Return result - "Give this data back to ContentView so it can render it"
- */
-
 import Foundation
 
 class CommandRunner {

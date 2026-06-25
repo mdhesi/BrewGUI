@@ -1,13 +1,3 @@
-/*
- A calm, two-line package row in the style of the App Store "Installed" tab:
-   - line 1: package name (primary)
-   - line 2: version / metadata (secondary grey)
-
- At rest the row shows no buttons. Remove is destructive, so it only appears
- on hover (as a Liquid Glass control) and via right-click context menu —
- never a persistent per-row button (see CLAUDE.md).
- */
-
 import SwiftUI
 
 struct PackageRow: View {

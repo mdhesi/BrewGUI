@@ -1,11 +1,3 @@
-/*
- Keeps a persistent record of packages the user has removed, so they can be
- reinstalled later — even after quitting and reopening the app.
-
- The list is saved as JSON inside the app's Application Support directory
- (~/Library/Application Support/BrewGUI/removal-history.json).
- */
-
 import Foundation
 import Combine
 
