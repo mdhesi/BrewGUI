@@ -22,14 +22,15 @@ struct InstalledView: View {
                     ForEach(filtered) { pkg in
                         PackageRow(
                             package: pkg,
-                            isBusy: model.busy.contains(pkg.name),
-                            onRemove: { Task { await model.uninstall(pkg.name, history: history) } }
+                            isBusy: model.busy.contains(pkg.id),
+                            onRemove: { Task { await model.uninstall(pkg, history: history) } }
                         )
                     }
                 }
             }
         }
         .listStyle(.inset)
+        .animation(Theme.springAnimation, value: filtered)
         .navigationTitle("Installed")
         .searchable(text: $searchText, prompt: "Search installed packages")
         .toolbar {

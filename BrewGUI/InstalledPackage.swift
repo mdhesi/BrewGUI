@@ -1,7 +1,9 @@
 import Foundation
 
 struct InstalledPackage: Identifiable, Hashable {
-    var id: String { name } // names are unique within an install
+    // A name can exist as BOTH a formula and a cask (e.g. copilot-cli), so the
+    // kind has to be part of the identity or the two collide in a ForEach.
+    var id: String { (isCask ? "cask/" : "formula/") + name }
     let name: String
     let version: String
     let isCask: Bool

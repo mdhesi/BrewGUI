@@ -27,17 +27,19 @@ final class InstalledModel {
     }
 
     /// Uninstall a package; reloads on success, surfaces brew's error otherwise.
-    func uninstall(_ name: String, history: RemovalHistoryStore) async {
-        guard !busy.contains(name) else { return }
-        busy.insert(name)
-        defer { busy.remove(name) }
+    /// Passes `--formula`/`--cask` so a name installed as both is unambiguous.
+    func uninstall(_ package: InstalledPackage, history: RemovalHistoryStore) async {
+        guard !busy.contains(package.id) else { return }
+        busy.insert(package.id)
+        defer { busy.remove(package.id) }
 
-        let result = await BrewProcess.run(["uninstall", name])
+        let kindFlag = package.isCask ? "--cask" : "--formula"
+        let result = await BrewProcess.run(["uninstall", kindFlag, package.name])
         if result.succeeded {
-            history.record(name)
+            history.record(package.name)
             await load()
         } else {
-            errorMessage = result.combined.isEmpty ? "Failed to remove \(name)." : result.combined
+            errorMessage = result.combined.isEmpty ? "Failed to remove \(package.name)." : result.combined
         }
     }
 
