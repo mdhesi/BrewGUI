@@ -20,6 +20,9 @@ final class BrowseModel {
     var errorMessage: String?
     /// Tokens currently installing (per-row spinner).
     var installing: Set<String> = []
+    /// `PackageSummary.id`s already installed, so rows can show "Installed"
+    /// instead of an Install action.
+    private(set) var installedIDs: Set<String> = []
 
     /// How many more rows to reveal each time you reach the bottom.
     static let pageSize = 20
@@ -47,6 +50,8 @@ final class BrowseModel {
         isLoading = true
         defer { isLoading = false }
 
+        await loadInstalled()
+
         async let formulaeResult = BrewAPIClient.shared.allFormulae(forceRefresh: forceRefresh)
         async let casksResult = BrewAPIClient.shared.allCasks(forceRefresh: forceRefresh)
         let (formulae, casks) = await (formulaeResult, casksResult)
@@ -68,6 +73,27 @@ final class BrowseModel {
         }.value
 
         applyQuery()
+    }
+
+    /// Load the set of currently-installed formulae + casks (names/tokens only)
+    /// so Browse can mark what's already on the machine.
+    func loadInstalled() async {
+        async let formulaeResult = BrewProcess.run(["list", "--formula"])
+        async let casksResult = BrewProcess.run(["list", "--cask"])
+        let (formulae, casks) = await (formulaeResult, casksResult)
+
+        var ids = Set<String>()
+        for name in Self.tokens(formulae.stdout) { ids.insert("formula/\(name)") }
+        for token in Self.tokens(casks.stdout) { ids.insert("cask/\(token)") }
+        installedIDs = ids
+    }
+
+    /// Parse one-token-per-line `brew list` output, skipping warnings/errors.
+    private static func tokens(_ output: String) -> [String] {
+        output
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("Warning:") && !$0.hasPrefix("Error:") }
     }
 
     /// Set the search query and recompute matches (resets pagination).
@@ -114,7 +140,9 @@ final class BrowseModel {
         let kindFlag = package.kind == .cask ? "--cask" : "--formula"
         let ok = await operations.run(title: "Installing \(package.displayName)",
                                       arguments: ["install", kindFlag, package.token])
-        if !ok {
+        if ok {
+            installedIDs.insert(package.id)
+        } else {
             errorMessage = "Failed to install \(package.displayName). See the log for details."
         }
     }

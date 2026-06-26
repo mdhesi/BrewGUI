@@ -62,6 +62,7 @@ struct BrowseView: View {
                         BrowseRow(
                             package: pkg,
                             isInstalling: model.installing.contains(pkg.id),
+                            isInstalled: model.installedIDs.contains(pkg.id),
                             onInstall: { Task { await model.install(pkg, using: operations) } }
                         )
                         .tag(pkg)
@@ -90,6 +91,7 @@ struct BrowseView: View {
 struct BrowseRow: View {
     let package: PackageSummary
     var isInstalling: Bool = false
+    var isInstalled: Bool = false
     var onInstall: (() -> Void)? = nil
 
     @State private var isHovering = false
@@ -109,18 +111,7 @@ struct BrowseRow: View {
 
             Spacer(minLength: 12)
 
-            if isInstalling {
-                ProgressView()
-                    .controlSize(.small)
-            } else if let onInstall, isHovering {
-                Button(action: onInstall) {
-                    Label("Install", systemImage: "arrow.down.circle")
-                }
-                .buttonStyle(.glass)
-                .controlSize(.small)
-                .accessibilityLabel("Install \(package.displayName)")
-                .transition(.opacity)
-            }
+            trailing
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())
@@ -128,7 +119,7 @@ struct BrowseRow: View {
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
         }
         .contextMenu {
-            if let onInstall {
+            if let onInstall, !isInstalled {
                 Button {
                     onInstall()
                 } label: {
@@ -137,6 +128,37 @@ struct BrowseRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(package.displayName), \(package.kind.label)")
+        .accessibilityLabel("\(package.displayName), \(package.kind.label)\(isInstalled ? ", installed" : "")")
+    }
+
+    /// Trailing affordance, in priority order: busy spinner → "Installed" badge →
+    /// hover Install button → the brew token (so same-named packages, e.g. the
+    /// four ".NET SDK" casks, stay distinguishable).
+    @ViewBuilder private var trailing: some View {
+        if isInstalling {
+            ProgressView()
+                .controlSize(.small)
+        } else if isInstalled {
+            Label("Installed", systemImage: "checkmark.circle.fill")
+                .font(.caption.weight(.medium))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(.green)
+                .accessibilityLabel("\(package.displayName) is installed")
+        } else if let onInstall, isHovering {
+            Button(action: onInstall) {
+                Label("Install", systemImage: "arrow.down.circle")
+            }
+            .buttonStyle(.glass)
+            .controlSize(.small)
+            .accessibilityLabel("Install \(package.displayName)")
+            .transition(.opacity)
+        } else {
+            Text(package.token)
+                .font(.caption)
+                .monospaced()
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .accessibilityHidden(true)
+        }
     }
 }
