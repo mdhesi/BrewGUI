@@ -83,11 +83,8 @@ struct ContentView: View {
                 row(.outdated)
                 row(.history)
             }
-            Section("System") {
-                row(.services)
-                row(.cleanup)
-                row(.health)
-            }
+            // Services / Cleanup / Health are implemented as routes but hidden
+            // from the sidebar until they're built — see the roadmap in CLAUDE.md.
         }
         .navigationTitle("Homebrew")
         .navigationSplitViewColumnWidth(min: 200, ideal: 220)
