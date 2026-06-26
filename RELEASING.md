@@ -1,104 +1,83 @@
 # Releasing BrewGUI
 
-How to cut a signed, notarized release that users can install with
-`brew install --cask mdhesi/tap/brewgui` or a downloaded `.dmg`.
+BrewGUI is distributed by **downloading it from GitHub Releases** — no Homebrew
+tap, no App Store. There are two ways to cut a release:
 
-The heavy lifting is in [`scripts/release.sh`](scripts/release.sh) — it archives,
-exports with your Developer ID, builds a DMG, notarizes it, and staples the
-ticket. The parts only **you** can do are the one-time credential setup and the
-final upload + tap update.
-
----
-
-## Prerequisites (one time)
-
-1. **Apple Developer Program membership** ($99/yr). Notarization is not possible
-   without it.
-
-2. **A "Developer ID Application" certificate** in your login keychain. In Xcode:
-   *Settings → Accounts → (your team) → Manage Certificates → +
-   → Developer ID Application*.
-
-3. **Your Team ID** (10 characters, on the Apple Developer *Membership* page).
-   Put it in [`scripts/ExportOptions.plist`](scripts/ExportOptions.plist),
-   replacing `REPLACE_TEAM_ID`.
-
-4. **Hardened Runtime enabled.** In Xcode → target *BrewGUI* → *Signing &
-   Capabilities*: set your Team, and add the **Hardened Runtime** capability if
-   it isn't there. Notarization rejects apps without it.
-
-5. **A stored notary credential profile** so the script can submit without
-   prompting. Create it once with an
-   [app-specific password](https://support.apple.com/en-us/102654):
-
-   ```sh
-   xcrun notarytool store-credentials brewgui-notary \
-     --apple-id "you@example.com" \
-     --team-id "YOUR_TEAM_ID" \
-     --password "app-specific-password"
-   ```
-
-   (The name `brewgui-notary` matches `NOTARY_PROFILE` in the script.)
-
-6. **A tap repo.** Create a GitHub repo named **`homebrew-tap`** under your
-   account — that makes the tap `mdhesi/tap`. Copy
-   [`scripts/brewgui.rb`](scripts/brewgui.rb) into it at `Casks/brewgui.rb`.
+- **Unsigned zip** ([`scripts/package.sh`](scripts/package.sh)) — needs nothing
+  but Xcode. Users open it the first time via *Open Anyway*. This is the default.
+- **Notarized DMG** ([`scripts/release.sh`](scripts/release.sh)) — smoother for
+  users (no Gatekeeper warning), but requires an Apple Developer account.
 
 ---
 
-## Cutting a release
+## Default: unsigned zip (no Apple account)
 
-1. **Bump the version.** In Xcode → target → *General*, set the *Version* (e.g.
-   `1.0.0`). This is `MARKETING_VERSION`; the script reads it automatically.
+1. **Set the version.** Xcode → target *BrewGUI* → *General* → *Version* (e.g.
+   `1.0.0`). The scripts read this automatically.
 
-2. **Build + notarize.**
+2. **Build + zip:**
 
    ```sh
-   ./scripts/release.sh
-   # or pin the version: VERSION=1.0.0 ./scripts/release.sh
+   ./scripts/package.sh
    ```
 
-   On success it prints the DMG path, the version, and the **sha256** — keep that
-   sha256 for the next step.
+   Produces `build/BrewGUI-<version>.zip`.
 
-3. **Create the GitHub Release.** Tag it `v1.0.0` and upload `build/BrewGUI-1.0.0.dmg`
-   as a release asset:
+3. **Publish the release:**
 
    ```sh
-   gh release create v1.0.0 build/BrewGUI-1.0.0.dmg \
+   gh release create v1.0.0 build/BrewGUI-1.0.0.zip \
      --title "BrewGUI 1.0.0" --notes "First release."
    ```
 
-4. **Update the cask** in your `homebrew-tap` repo (`Casks/brewgui.rb`): set
-   `version` and paste the `sha256` from step 2. Commit and push.
+That's it — the README and landing page already point users at the Releases page
+and explain the first-launch *Open Anyway* step.
 
-5. **Verify the install path:**
+### What users see (unsigned)
 
-   ```sh
-   brew install --cask mdhesi/tap/brewgui
-   ```
-
-6. **Update the landing page.** In `docs/index.html`, the install command and
-   download button are already wired to `mdhesi/tap/brewgui` and the Releases
-   page — just confirm they match once the release is live.
+Because the app isn't notarized, the first launch is blocked by Gatekeeper. Users:
+open it, then **System Settings → Privacy & Security → Open Anyway**. If macOS
+still refuses, `xattr -dr com.apple.quarantine /Applications/BrewGUI.app`. The
+README documents this.
 
 ---
 
-## Sanity checks
+## Optional: notarized DMG (smoother, needs Apple Developer account)
+
+If you want to remove the Gatekeeper friction entirely, notarize.
+
+**One-time setup:**
+
+1. **Apple Developer Program** membership ($99/yr).
+2. A **Developer ID Application** certificate (Xcode → *Settings → Accounts →
+   Manage Certificates → + → Developer ID Application*).
+3. Put your 10-char **Team ID** in
+   [`scripts/ExportOptions.plist`](scripts/ExportOptions.plist).
+4. Enable **Hardened Runtime** on the target (*Signing & Capabilities*).
+5. Store a notary credential profile (uses an
+   [app-specific password](https://support.apple.com/en-us/102654)):
+
+   ```sh
+   xcrun notarytool store-credentials brewgui-notary \
+     --apple-id "you@example.com" --team-id "YOUR_TEAM_ID" \
+     --password "app-specific-password"
+   ```
+
+**Each release:**
 
 ```sh
-# App is properly signed (Developer ID) and notarized:
-codesign --verify --deep --strict --verbose=2 build/export/BrewGUI.app
-spctl -a -t exec -vvv build/export/BrewGUI.app        # should say "accepted ... Notarized Developer ID"
+./scripts/release.sh
+# archives -> Developer ID export -> DMG -> notarize -> staple, prints the sha256
+gh release create v1.0.0 build/BrewGUI-1.0.0.dmg --title "BrewGUI 1.0.0" --notes "…"
+```
+
+**Verify:**
+
+```sh
+spctl -a -t exec -vvv build/export/BrewGUI.app   # -> "accepted ... Notarized Developer ID"
 xcrun stapler validate build/BrewGUI-1.0.0.dmg
 ```
 
-## Troubleshooting
-
-- **Notarization "Invalid" status** — run
-  `xcrun notarytool log <submission-id> --keychain-profile brewgui-notary` to see
-  exactly which file/signature was rejected (usually a missing hardened runtime
-  or an unsigned bundled binary).
-- **`spctl` rejects the app** — it wasn't stapled, or a nested binary isn't
-  signed. Re-run the script; it staples after notarizing.
-- **"No Developer ID Application certificate found"** — see prerequisite #2.
+**Troubleshooting:** if notarization comes back *Invalid*, run
+`xcrun notarytool log <submission-id> --keychain-profile brewgui-notary` for the
+exact rejection (usually missing hardened runtime or an unsigned nested binary).

@@ -42,15 +42,15 @@ install analytics.
 
 ## Install
 
-> A signed release is in progress. For now, build from source (below).
+Download the latest **`BrewGUI.zip`** from the
+[Releases page](https://github.com/mdhesi/BrewGUI/releases), unzip it, and drag
+**BrewGUI.app** into your Applications folder. Requires macOS 14 (Sonoma) or later.
 
-Once released:
-
-```sh
-brew install --cask mdhesi/tap/brewgui
-```
-
-…or grab the `.dmg` from [Releases](https://github.com/mdhesi/BrewGUI/releases).
+> BrewGUI isn't notarized by Apple, so the first launch is gated by Gatekeeper.
+> Try to open it, then go to **System Settings → Privacy & Security** and click
+> **Open Anyway**. (If macOS still refuses, run
+> `xattr -dr com.apple.quarantine /Applications/BrewGUI.app`.) Or just build it
+> yourself — see below.
 
 ## Build from source
 
