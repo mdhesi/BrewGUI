@@ -8,18 +8,15 @@ struct PackageRow: View {
     @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: package.isCask ? "app.dashed" : "shippingbox")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
-                .accessibilityHidden(true)
+        HStack(spacing: Spacing.m) {
+            IconTile(systemName: package.isCask ? "app.dashed" : "shippingbox")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(package.name)
-                    .font(.body)
+                    .font(.body.weight(.semibold))
                 Text(package.subtitle)
                     .font(.caption)
+                    .monospaced()
                     .foregroundStyle(.secondary)
             }
 

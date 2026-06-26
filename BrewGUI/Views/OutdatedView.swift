@@ -60,10 +60,15 @@ struct OutdatedView: View {
             Section("Outdated (\(model.outdated.count))") {
                 ForEach(model.outdated, id: \.self) { name in
                     HStack(spacing: Spacing.m) {
-                        Image(systemName: "arrow.trianglehead.2.clockwise")
-                            .foregroundStyle(.secondary)
-                            .accessibilityHidden(true)
-                        Text(name)
+                        IconTile(systemName: "arrow.up.circle")
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(name)
+                                .font(.body.weight(.semibold))
+                            Text("Update available")
+                                .font(.caption)
+                                .foregroundStyle(BrewColor.amberDeep)
+                        }
                         Spacer()
                         if model.upgrading.contains(name) {
                             ProgressView().controlSize(.small)
