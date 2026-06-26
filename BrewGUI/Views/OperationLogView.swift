@@ -10,10 +10,49 @@ struct OperationLogView: View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             header
             logScroll
+            if operations.trustPrompt != nil {
+                trustBanner
+            }
             footer
         }
         .padding(Spacing.l)
         .frame(minWidth: 540, minHeight: 420)
+    }
+
+    /// Offered when an operation fails because the package is in an untrusted
+    /// third-party tap: trusting it and retrying instead of dead-ending.
+    @ViewBuilder private var trustBanner: some View {
+        if let prompt = operations.trustPrompt {
+            HStack(alignment: .top, spacing: Spacing.s) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundStyle(.orange)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text("Untrusted tap")
+                        .font(.subheadline.weight(.semibold))
+                    Text("This package comes from “\(prompt.tap)”, a third-party tap Homebrew won’t load until you trust it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: Spacing.s)
+                Button {
+                    Task { await operations.trustAndRetry() }
+                } label: {
+                    Label("Trust & Retry", systemImage: "checkmark.shield")
+                }
+                .buttonStyle(.glassProminent)
+                .controlSize(.regular)
+                .disabled(operations.isRunning)
+                .accessibilityLabel("Trust \(prompt.tap) and retry")
+            }
+            .padding(Spacing.m)
+            .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                    .strokeBorder(.orange.opacity(0.30), lineWidth: 1)
+            )
+        }
     }
 
     private var header: some View {
