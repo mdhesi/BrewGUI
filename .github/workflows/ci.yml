@@ -1,0 +1,44 @@
+name: CI
+
+# Builds BrewGUI on every push and pull request so breakages surface early.
+# Free on GitHub-hosted runners for public repos (incl. macOS, unlimited minutes).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel an in-progress run when new commits land on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (macOS)
+    # NOTE: BrewGUI uses the macOS 26 "Liquid Glass" SDK (.glassEffect, .glass
+    # button styles). The runner needs Xcode 26+. If `macos-latest` ships an
+    # older Xcode and the build fails on those APIs, pin `runs-on: macos-26`.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest installed Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project BrewGUI.xcodeproj \
+            -scheme BrewGUI \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
