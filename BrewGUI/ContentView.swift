@@ -95,8 +95,7 @@ struct ContentView: View {
     @ViewBuilder private var detail: some View {
         switch selection ?? .browse {
         case .browse:
-            PlaceholderScreen(title: "Browse", symbol: "square.grid.2x2",
-                              message: "Search and discover formulae and casks.\nComing in the next step.")
+            BrowseView()
         case .installed:
             InstalledView()
         case .outdated:
