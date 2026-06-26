@@ -1,21 +1,21 @@
 import SwiftUI
 
-/// Searchable catalog of every Homebrew formula and cask, sourced from the JSON
-/// API via `BrowseModel`. Two-line rows with a hover/keyboard Install action that
-/// streams through the shared OperationCenter. See ARCHITECTURE.md §9.
+/// Searchable, paginated catalog of every Homebrew formula and cask, sourced from
+/// the JSON API via `BrowseModel`. Two-line rows with a real package icon and a
+/// hover/context-menu Install that streams through the shared OperationCenter.
+/// See ARCHITECTURE.md §9.
 struct BrowseView: View {
+    @Binding var selection: PackageSummary?
     @State private var model = BrowseModel()
     @Environment(OperationCenter.self) private var operations
     @State private var searchText = ""
 
-    private var results: [PackageSummary] { model.results(for: searchText) }
-
     var body: some View {
         Group {
-            if model.isLoading && model.all.isEmpty {
+            if model.isLoading && model.visible.isEmpty {
                 ProgressView("Loading catalog…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if model.all.isEmpty {
+            } else if model.matchCount == 0 && model.errorMessage != nil {
                 ContentUnavailableView("Catalog unavailable",
                                        systemImage: "wifi.slash",
                                        description: Text("Couldn’t load the Homebrew catalog. Check your connection and Refresh."))
@@ -25,6 +25,9 @@ struct BrowseView: View {
         }
         .navigationTitle("Browse")
         .searchable(text: $searchText, prompt: "Search formulae and casks")
+        .onChange(of: searchText) { _, newValue in
+            model.search(newValue)
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -44,23 +47,29 @@ struct BrowseView: View {
             Text(model.errorMessage ?? "")
         }
         .task {
-            if model.all.isEmpty { await model.load() }
+            if model.visible.isEmpty { await model.load() }
         }
     }
 
     private var list: some View {
-        List {
+        List(selection: $selection) {
             Section(sectionTitle) {
-                if results.isEmpty {
+                if model.visible.isEmpty {
                     Text("No matches for “\(searchText)”")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(results) { pkg in
+                    ForEach(model.visible) { pkg in
                         BrowseRow(
                             package: pkg,
                             isInstalling: model.installing.contains(pkg.id),
                             onInstall: { Task { await model.install(pkg, using: operations) } }
                         )
+                        .tag(pkg)
+                        .onAppear {
+                            // Infinite scroll: reveal the next page when the last
+                            // row shows up.
+                            if pkg.id == model.visible.last?.id { model.loadMore() }
+                        }
                     }
                 }
             }
@@ -70,16 +79,14 @@ struct BrowseView: View {
 
     private var sectionTitle: String {
         if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-            return "Catalog (\(model.all.count))"
+            return "Catalog (\(model.matchCount))"
         }
-        let shown = results.count
-        let capped = shown >= BrowseModel.resultLimit ? "\(shown)+" : "\(shown)"
-        return "\(capped) result\(shown == 1 ? "" : "s")"
+        return "\(model.matchCount) result\(model.matchCount == 1 ? "" : "s")"
     }
 }
 
-/// One catalog row: leading kind glyph, name + description, hover/context-menu
-/// Install. Self-contained so it doesn't depend on the in-progress design pass.
+/// One catalog row: real package icon (favicon, with amber-tile fallback), name +
+/// description, hover/context-menu Install.
 struct BrowseRow: View {
     let package: PackageSummary
     var isInstalling: Bool = false
@@ -88,16 +95,12 @@ struct BrowseRow: View {
     @State private var isHovering = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: package.kind.symbolName)
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
-                .accessibilityHidden(true)
+        HStack(spacing: Spacing.m) {
+            PackageIcon(url: package.iconURL, fallbackSymbol: package.kind.symbolName)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(package.displayName)
-                    .font(.body)
+                    .font(.body.weight(.semibold))
                 Text(package.desc ?? package.kind.label)
                     .font(.caption)
                     .foregroundStyle(.secondary)

@@ -20,8 +20,20 @@ struct PackageSummary: Identifiable, Hashable {
     let kind: PackageKind
     let desc: String?
     var installCount: Int?
+    let homepage: String?   // used to derive a row icon
 
     var id: String { kind.rawValue + "/" + token }
+
+    /// Best-effort real icon for the package: the favicon of its homepage, via
+    /// DuckDuckGo's icon service. Falls back to an SF Symbol in the UI when the
+    /// homepage is missing or the icon can't be fetched. Most casks (GUI apps)
+    /// resolve to their real app icon; many formulae to their project logo.
+    var iconURL: URL? {
+        guard let homepage,
+              let host = URL(string: homepage)?.host,
+              !host.isEmpty else { return nil }
+        return URL(string: "https://icons.duckduckgo.com/ip3/\(host).ico")
+    }
 }
 
 // MARK: - Detail
@@ -38,6 +50,7 @@ struct PackageDetail: Identifiable, Hashable {
     let version: String?
     let dependencies: [String]
     let installCount30d: Int?
+    let installCount365d: Int?
     var downloadSize: Int64?    // bytes, best-effort (API artifact)
     var installedSize: Int64?   // bytes, best-effort (parsed from brew info)
     var isInstalled: Bool
@@ -67,7 +80,7 @@ struct APIFormula: Codable, Hashable {
     }
 
     var summary: PackageSummary {
-        PackageSummary(token: name, displayName: name, kind: .formula, desc: desc, installCount: nil)
+        PackageSummary(token: name, displayName: name, kind: .formula, desc: desc, installCount: nil, homepage: homepage)
     }
 
     /// Plain install count for this formula over a period (ignores variant
@@ -89,7 +102,7 @@ struct APICask: Codable, Hashable {
     var displayName: String { name?.first ?? token }
 
     var summary: PackageSummary {
-        PackageSummary(token: token, displayName: displayName, kind: .cask, desc: desc, installCount: nil)
+        PackageSummary(token: token, displayName: displayName, kind: .cask, desc: desc, installCount: nil, homepage: homepage)
     }
 
     func installCount(period: AnalyticsPeriod) -> Int? {

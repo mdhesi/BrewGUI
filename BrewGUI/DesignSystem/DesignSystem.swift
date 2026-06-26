@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// 8pt spacing grid. Use these everywhere instead of magic numbers so layout
 /// stays consistent across screens.
@@ -56,6 +57,38 @@ struct IconTile: View {
                     .strokeBorder(BrewColor.amberBorder, lineWidth: 0.75)
             )
             .accessibilityHidden(true)
+    }
+}
+
+/// A package's real icon (homepage favicon) when it loads, otherwise the amber
+/// `IconTile` placeholder. Loads lazily and cancels when the row scrolls away, so
+/// only on-screen rows hit the network. Cached by `IconLoader`.
+struct PackageIcon: View {
+    let url: URL?
+    let fallbackSymbol: String
+    var size: CGFloat = 32
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+            } else {
+                IconTile(systemName: fallbackSymbol, size: size)
+            }
+        }
+        .task(id: url) {
+            image = nil
+            guard let url else { return }
+            image = await IconLoader.shared.image(for: url)
+        }
+        .accessibilityHidden(true)
     }
 }
 

@@ -39,6 +39,7 @@ enum SidebarItem: String, Hashable, CaseIterable, Identifiable {
 
 struct ContentView: View {
     @State private var selection: SidebarItem? = .browse
+    @State private var selectedPackage: PackageSummary?
     @State private var operations = OperationCenter()
     @StateObject private var history = RemovalHistoryStore()
 
@@ -55,11 +56,17 @@ struct ContentView: View {
     private var mainInterface: some View {
         NavigationSplitView {
             sidebar
+        } content: {
+            content
         } detail: {
-            detail
+            packageDetail
         }
         .environment(operations)
         .environmentObject(history)
+        .onChange(of: selection) {
+            // Switching screens shouldn't leave a stale package in the detail pane.
+            selectedPackage = nil
+        }
         .sheet(isPresented: $operations.isLogPresented) {
             OperationLogView()
                 .environment(operations)
@@ -92,10 +99,11 @@ struct ContentView: View {
             .accessibilityLabel(item.title)
     }
 
-    @ViewBuilder private var detail: some View {
+    /// Middle column: the selected screen.
+    @ViewBuilder private var content: some View {
         switch selection ?? .browse {
         case .browse:
-            BrowseView()
+            BrowseView(selection: $selectedPackage)
         case .installed:
             InstalledView()
         case .outdated:
@@ -111,6 +119,17 @@ struct ContentView: View {
         case .health:
             PlaceholderScreen(title: "Health", symbol: "stethoscope",
                               message: "Run brew doctor and review your setup.\nComing soon.")
+        }
+    }
+
+    /// Trailing column: details for the package selected in the content column.
+    @ViewBuilder private var packageDetail: some View {
+        if let selectedPackage {
+            PackageDetailView(package: selectedPackage)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 340)
+        } else {
+            PackageDetailPlaceholder()
+                .navigationSplitViewColumnWidth(min: 280, ideal: 340)
         }
     }
 }
