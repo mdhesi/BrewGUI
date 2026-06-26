@@ -7,6 +7,8 @@
 See everything `brew` installed, spot what's outdated, browse the whole catalog,
 and install or update it all — without opening a terminal.
 
+[![CI](https://github.com/mdhesi/BrewGUI/actions/workflows/ci.yml/badge.svg)](https://github.com/mdhesi/BrewGUI/actions/workflows/ci.yml)
+
 [Website](https://mdhesi.github.io/BrewGUI/) · [Architecture](ARCHITECTURE.md) · [Releasing](RELEASING.md)
 
 ![BrewGUI](docs/screenshot.png)
